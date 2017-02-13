@@ -1,5 +1,5 @@
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Detours", "..\lib\detours\src\Detours.vcxproj", "{D3A8C510-DFB8-4534-AC84-B1EB4BC2C452}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NWNCX Loader", "loader\loader.vcxproj", "{C8CBAF86-80C5-4133-8ECC-4CEB65300382}"
@@ -23,6 +23,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NWNCX Connect Plugin", "plugins\connect\connect.vcxproj", "{2F3BA464-18CB-48D0-90DD-8D6839115DE3}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NWNCX Serverlist Plugin", "plugins\serverlist\serverlist.vcxproj", "{1F979FA4-D838-4203-BA59-A1300045F4D6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NWNCX Custom", "plugins\custom\custom.vcxproj", "{789F3B53-C25A-4B80-9790-86735BBD6E27}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -78,6 +80,10 @@ Global
 		{1F979FA4-D838-4203-BA59-A1300045F4D6}.Debug|Win32.Build.0 = Debug|Win32
 		{1F979FA4-D838-4203-BA59-A1300045F4D6}.Release|Win32.ActiveCfg = Release|Win32
 		{1F979FA4-D838-4203-BA59-A1300045F4D6}.Release|Win32.Build.0 = Release|Win32
+		{789F3B53-C25A-4B80-9790-86735BBD6E27}.Debug|Win32.ActiveCfg = Debug|Win32
+		{789F3B53-C25A-4B80-9790-86735BBD6E27}.Debug|Win32.Build.0 = Debug|Win32
+		{789F3B53-C25A-4B80-9790-86735BBD6E27}.Release|Win32.ActiveCfg = Release|Win32
+		{789F3B53-C25A-4B80-9790-86735BBD6E27}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

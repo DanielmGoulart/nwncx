@@ -1,0 +1,110 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="API">
+      <UniqueIdentifier>{8cf2b593-88fd-4ee0-9a8d-a652688aa0e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="API\nwnapi">
+      <UniqueIdentifier>{4e0fa122-956f-4b83-b7c4-d2bf9b926cbb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="API\nwnapi\custom">
+      <UniqueIdentifier>{c5f2f1a9-2eeb-47b5-94a1-e5bab8f10e35}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\include\pluginapi.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\C2DA.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CAppManager.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CClientExoApp.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CClientExoAppInternal.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CConnectionLib.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CExoArrayList.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CExoLocString.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CExoResMan.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CExoString.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CNWMessage.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CNWRules.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CResRef.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CTlkTable.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\nwnapi.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\nwndef.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\Vector.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\custom\nwn_globals.h">
+      <Filter>API\nwnapi\custom</Filter>
+    </ClInclude>
+    <ClInclude Include="custom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\nwnapi\CNWClass.h">
+      <Filter>API\nwnapi</Filter>
+    </ClInclude>
+    <ClInclude Include="CExoArrayList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\include\nwnapi\C2DA.cpp">
+      <Filter>API\nwnapi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\include\nwnapi\CResRef.cpp">
+      <Filter>API\nwnapi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\include\nwnapi\custom\nwn_globals.cpp">
+      <Filter>API\nwnapi\custom</Filter>
+    </ClCompile>
+    <ClCompile Include="custom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\include\nwnapi\symbols.asm">
+      <Filter>API\nwnapi</Filter>
+    </None>
+  </ItemGroup>
+</Project>
