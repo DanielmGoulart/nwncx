@@ -11,11 +11,18 @@ struct CExoArrayList{
 	int len;
 	int alloc;
 
-	inline int Add(T val, int reserve = 1){
+	inline int Add(T val, int reserve = 10){
 		if (len == alloc) {                                                                       
-            T *re;                                                                                
-            if ((re = (T *)realloc(data, sizeof(T) * (alloc + reserve))) == NULL)     
-                return -1;                                                                        
+            T *re;    
+			re = (T *) nwncx_malloc(sizeof(T) * (alloc + reserve));
+			if(!re)
+				return -1;
+			memcpy(re, data, len);
+			re[len] = 0;
+
+			nwncx_free(data);
+            //if ((re = (T *)realloc(data, sizeof(T) * (alloc + reserve))) == NULL)     
+            //    return -1;                                                                        
             data = re;                                                                            
             alloc +=reserve;                                                                      
         }                                                                                         

@@ -10,3 +10,8 @@
 #include "../../../include/nwnapi/CNWClass.h"
 //#include "../../../include/nwnapi/CExoArrayList.h"
 #include "CExoArrayList.h"
+
+
+#define CLASS_TYPE_BARD 1
+#define CLASS_TYPE_SORCERER 9
+#define CLASS_TYPE_WIZARD 10
