@@ -77,85 +77,49 @@ char __fastcall CNWCCreatureStats__GetClass_Hook(void *pThis, int edx, unsigned 
 void (__fastcall *CCharacterSpellsPanel__HandleOkButton)(void *pThis, int edx);
 void __fastcall CCharacterSpellsPanel__HandleOkButton_Hook(void *pThis, int edx){
 
+	int cre_id = *(int*)((int)pThis + 2408);
+	void *cre = GetCreature(cre_id);
+	
 	if(g_caster_cls){
+		g_caster_cls = 0;
+		void *cre_stats = *(void **)((int)cre + 696);
+		*((char*)cre_stats + 50) = g_lvlup_clspos;
 		g_caster_cls = 0;
 	}
 
 	CCharacterSpellsPanel__HandleOkButton(pThis, edx);
 }
 
-void (__fastcall *CCharacterSpellsPanel__SetupSpells)(void *pThis, int edx, int a2);
-void __fastcall CCharacterSpellsPanel__SetupSpells_Hook(void *pThis, int edx, int a2){
-	int bkpcls = -1;
-	
+void (__fastcall *CCharacterSpellsPanel__HandleCancelButton)(void *pThis, int edx);
+void __fastcall CCharacterSpellsPanel__HandleCancelButton_Hook(void *pThis, int edx){
+
 	int cre_id = *(int*)((int)pThis + 2408);
 	void *cre = GetCreature(cre_id);
-	void *cre_stats = nullptr;
+	
 	if(g_caster_cls){
-		if(cre){
-			fprintf(logFile, "Alterando o cls pos \n");
-			fflush(logFile);
-			cre_stats = *(void **)((int)cre + 696);
-			bkpcls = *((char*)cre_stats + 50);
-			*((char*)cre_stats + 50) = g_lvlup_clspos;
-		}
+		g_caster_cls = 0;
+		void *cre_stats = *(void **)((int)cre + 696);
+		*((char*)cre_stats + 50) = g_lvlup_clspos;
+		g_caster_cls = 0;
 	}
 
-	CCharacterSpellsPanel__SetupSpells(pThis, edx, a2);
-
-	if(bkpcls != -1){
-		*((char*)cre_stats + 50) = bkpcls;
-	}
+	CCharacterSpellsPanel__HandleCancelButton(pThis, edx);
 }
 
-void (__fastcall *CCharacterSpellsPanel__PostAttachmentInitialize)(void *pThis, int edx);
-void __fastcall CCharacterSpellsPanel__PostAttachmentInitialize_Hook(void *pThis, int edx){
-	int bkpcls = -1;
-	
+int (__fastcall *CCharacterSpellsPanel__HandleModalEscKey)(void *pThis, int edx);
+int __fastcall CCharacterSpellsPanel__HandleModalEscKey_Hook(void *pThis, int edx){
+
 	int cre_id = *(int*)((int)pThis + 2408);
 	void *cre = GetCreature(cre_id);
-	void *cre_stats = nullptr;
-	if(g_caster_cls){
-		if(cre){
-			fprintf(logFile, "Alterando o cls pos \n");
-			fflush(logFile);
-			cre_stats = *(void **)((int)cre + 696);
-			bkpcls = *((char*)cre_stats + 50);
-			*((char*)cre_stats + 50) = g_lvlup_clspos;
-		}
-	}
-
-	CCharacterSpellsPanel__PostAttachmentInitialize(pThis, edx);
-
-	if(bkpcls != -1){
-		*((char*)cre_stats + 50) = bkpcls;
-	}
-}
-
-int (__fastcall *CCharacterSpellsPanel__HandleSelectSpellLevel)(void *pThis, int edx, int a2);
-int __fastcall CCharacterSpellsPanel__HandleSelectSpellLevel_Hook(void *pThis, int edx, int a2){
-	int bkpcls = -1;
 	
-	int cre_id = *(int*)((int)pThis + 2408);
-	void *cre = GetCreature(cre_id);
-	void *cre_stats = nullptr;
 	if(g_caster_cls){
-		if(cre){
-			fprintf(logFile, "Alterando entre círculos de magias \n");
-			fflush(logFile);
-			cre_stats = *(void **)((int)cre + 696);
-			bkpcls = *((char*)cre_stats + 50);
-			*((char*)cre_stats + 50) = g_lvlup_clspos;
-		}
+		g_caster_cls = 0;
+		void *cre_stats = *(void **)((int)cre + 696);
+		*((char*)cre_stats + 50) = g_lvlup_clspos;
+		g_caster_cls = 0;
 	}
 
-	int nRet = CCharacterSpellsPanel__HandleSelectSpellLevel(pThis, edx, a2);
-
-	if(bkpcls != -1){
-		*((char*)cre_stats + 50) = bkpcls;
-	}
-
-	return nRet;
+	return CCharacterSpellsPanel__HandleModalEscKey(pThis, edx);
 }
 
 void (__fastcall *CCharacterFeatsPanel__HandleOkButton)(void *pThis, int edx);
@@ -175,14 +139,14 @@ void __fastcall CCharacterFeatsPanel__HandleOkButton_Hook(void *pThis, int edx){
 
 		if(ArcSpelllvlMod){
 			int caster_level;
-			int override_cls_pos;
 			int gain_spell_level = ((cls_lvl + ArcSpelllvlMod - 1) % ArcSpelllvlMod);
 			if(!gain_spell_level){
 				g_caster_cls = 0;
 				for (int i = 0; i < cls_pos; i++){
 					char caster_cls = *((char *)cre_stats + 256 * i + 473);
 					if(	caster_cls == CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
-						g_lvlup_clspos = i;
+						g_lvlup_clspos = *((char*)cre_stats + 50);
+						*((char*)cre_stats + 50) = i;
 						g_caster_cls = caster_cls;
 						caster_level = *((char *)cre_stats + 256 * i + 474);
 						g_total_level = caster_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
@@ -190,9 +154,32 @@ void __fastcall CCharacterFeatsPanel__HandleOkButton_Hook(void *pThis, int edx){
 					}
 				}
 			}
-		}
+		}else if(cls == CLASS_TYPE_BARD || cls == CLASS_TYPE_SORCERER || cls == CLASS_TYPE_WIZARD){
+				int cls_len = *((char*)cre_stats + 49);
+				
+				if(cls_pos == 2){
+					//Só a classe caster "mais da esquerda"
+					char caster_cls = *((char *)cre_stats + 473);
+					if(caster_cls ==  CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
+						goto exit;
+					}
+				}
+				for(int i = cls_pos; i < cls_len; i++){
+					char prestige_caster_cls = *((char *)cre_stats + 256 * i + 473);
+					CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, prestige_caster_cls);
+					char ArcSpelllvlMod = *((byte*)c + 612); 
+					if(ArcSpelllvlMod){
+						int prestige_caster_cls_lvl = *((char *)cre_stats + 256 * i + 474);
+						g_total_level = cls_lvl + ((prestige_caster_cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+						g_caster_cls = cls;
+						break;
+					}
+				}
+
+			}
 	}
 
+exit:
 	CCharacterFeatsPanel__HandleOkButton(pThis, edx);
 }
 
@@ -217,14 +204,14 @@ void __fastcall CCharacterSkillsPanel__HandleOkButton_Hook(void *pThis, int edx)
 
 			if(ArcSpelllvlMod){
 				int caster_level;
-				int override_cls_pos;
 				int gain_spell_level = ((cls_lvl + ArcSpelllvlMod - 1) % ArcSpelllvlMod);
 				if(!gain_spell_level){
 					g_caster_cls = 0;
 					for (int i = 0; i < cls_pos; i++){
 						char caster_cls = *((char *)cre_stats + 256 * i + 473);
 						if(	caster_cls == CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
-							g_lvlup_clspos = i;
+							g_lvlup_clspos = *((char*)cre_stats + 50);
+							*((char*)cre_stats + 50) = i;
 							g_caster_cls = caster_cls;
 							caster_level = *((char *)cre_stats + 256 * i + 474);
 							g_total_level = caster_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
@@ -232,10 +219,33 @@ void __fastcall CCharacterSkillsPanel__HandleOkButton_Hook(void *pThis, int edx)
 						}
 					}
 				}
+			}else if(cls == CLASS_TYPE_BARD || cls == CLASS_TYPE_SORCERER || cls == CLASS_TYPE_WIZARD){
+				int cls_len = *((char*)cre_stats + 49);
+				
+				if(cls_pos == 2){
+					//Só a classe caster "mais da esquerda"
+					char caster_cls = *((char *)cre_stats + 473);
+					if(caster_cls ==  CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
+						goto exit;
+					}
+				}
+				for(int i = cls_pos; i < cls_len; i++){
+					char prestige_caster_cls = *((char *)cre_stats + 256 * i + 473);
+					CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, prestige_caster_cls);
+					char ArcSpelllvlMod = *((byte*)c + 612); 
+					if(ArcSpelllvlMod){
+						int prestige_caster_cls_lvl = *((char *)cre_stats + 256 * i + 474);
+						g_total_level = cls_lvl + ((prestige_caster_cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+						g_caster_cls = cls;
+						break;
+					}
+				}
+
 			}
 		}
 	}
 
+exit:
 	CCharacterSkillsPanel__HandleOkButton(pThis, edx);
 }
 
@@ -248,64 +258,25 @@ void __fastcall CCharPageChar__HandleLevelUpButton_Hook(void *pThis, int edx){
 	CCharPageChar__HandleLevelUpButton(pThis, edx);
 }
 
+#define my_hook(addr, pfunc, hook)				\
+	*(DWORD*)&pfunc = addr;						\
+	if(DetourAttach(&(PVOID&)pfunc, hook) == 0)	\
+		fprintf(logFile, #pfunc " Hooked\n");	\
+	else										\
+		fprintf(logFile, #pfunc " Failed\n")		\
+
 void HookFunctions(){
 	DetourTransactionBegin();
 	DetourUpdateThread(GetCurrentThread());
 
-	*(DWORD*)&CCharacterFeatsPanel__HandleOkButton = 0x005A6E00;
-	*(DWORD*)&CNWCCreatureStats__GetClass = 0x004EE300;
-	*(DWORD*)&CNWCCreatureStats__GetClassLevel = 0x004EE320;
-	*(DWORD*)&CCharacterSpellsPanel__HandleOkButton = 0x005AC020;
-	*(DWORD*)&CCharPageChar__HandleLevelUpButton = 0x00497E40;
-	*(DWORD*)&CCharacterSkillsPanel__HandleOkButton = 0x005A9C30;
-	*(DWORD*)&CCharacterSpellsPanel__SetupSpells = 0x005ABA40;
-	*(DWORD*)&CCharacterSpellsPanel__PostAttachmentInitialize = 0x005AB5F0;
-	*(DWORD*)&CCharacterSpellsPanel__HandleSelectSpellLevel = 0x005ACD80;
-
-	if(DetourAttach(&(PVOID&)CCharacterFeatsPanel__HandleOkButton, CCharacterFeatsPanel__HandleOkButton_Hook) == 0){
-		fprintf(logFile, "CCharacterFeatsPanel__HandleOkButton Hooked\n");
-	}else
-		fprintf(logFile, "CCharacterFeatsPanel__HandleOkButton Failed\n");
-
-	if(DetourAttach(&(PVOID&)CNWCCreatureStats__GetClass, CNWCCreatureStats__GetClass_Hook) == 0){
-		fprintf(logFile, "CNWCCreatureStats__GetClass Hooked\n");
-	}else
-		fprintf(logFile, "CNWCCreatureStats__GetClass Failed\n");
-
-	if(DetourAttach(&(PVOID&)CNWCCreatureStats__GetClassLevel, CNWCCreatureStats__GetClassLevel_Hook) == 0){
-		fprintf(logFile, "CNWCCreatureStats__GetClassLevel Hooked\n");
-	}else
-		fprintf(logFile, "CNWCCreatureStats__GetClassLevel Failed\n");
-
-	if(DetourAttach(&(PVOID&)CCharacterSpellsPanel__HandleOkButton, CCharacterSpellsPanel__HandleOkButton_Hook) == 0){
-		fprintf(logFile, "CCharacterSpellsPanel__HandleOkButton Hooked\n");
-	}else
-		fprintf(logFile, "CCharacterSpellsPanel__HandleOkButton Failed\n");
-
-	if(DetourAttach(&(PVOID&)CCharPageChar__HandleLevelUpButton, CCharPageChar__HandleLevelUpButton_Hook) == 0){
-		fprintf(logFile, "CCharPageChar__HandleLevelUpButton Hooked\n");
-	}else
-		fprintf(logFile, "CCharPageChar__HandleLevelUpButton Failed\n");
-
-	if(DetourAttach(&(PVOID&)CCharacterSkillsPanel__HandleOkButton, CCharacterSkillsPanel__HandleOkButton_Hook) == 0){
-		fprintf(logFile, "CCharacterSkillsPanel__HandleOkButton Hooked\n");
-	}else
-		fprintf(logFile, "CCharacterSkillsPanel__HandleOkButton Failed\n");
-
-	if(DetourAttach(&(PVOID&)CCharacterSpellsPanel__SetupSpells, CCharacterSpellsPanel__SetupSpells_Hook) == 0){
-		fprintf(logFile, "CCharacterSpellsPanel__SetupSpells Hooked\n");
-	}else
-		fprintf(logFile, "CCharacterSpellsPanel__SetupSpells Failed\n");
-
-	if(DetourAttach(&(PVOID&)CCharacterSpellsPanel__PostAttachmentInitialize, CCharacterSpellsPanel__PostAttachmentInitialize_Hook) == 0){
-		fprintf(logFile, "CCharacterSpellsPanel__PostAttachmentInitialize Hooked\n");
-	}else
-		fprintf(logFile, "CCharacterSpellsPanel__PostAttachmentInitialize Failed\n");
-
-	if(DetourAttach(&(PVOID&)CCharacterSpellsPanel__HandleSelectSpellLevel, CCharacterSpellsPanel__HandleSelectSpellLevel_Hook) == 0){
-		fprintf(logFile, "CCharacterSpellsPanel__HandleSelectSpellLevel Hooked\n");
-	}else
-		fprintf(logFile, "CCharacterSpellsPanel__HandleSelectSpellLevel Failed\n");
+	my_hook(0x005A6E00, CCharacterFeatsPanel__HandleOkButton, CCharacterFeatsPanel__HandleOkButton_Hook);
+	my_hook(0x004EE300, CNWCCreatureStats__GetClass, CNWCCreatureStats__GetClass_Hook);
+	my_hook(0x004EE320, CNWCCreatureStats__GetClassLevel, CNWCCreatureStats__GetClassLevel_Hook);
+	my_hook(0x005AC020, CCharacterSpellsPanel__HandleOkButton, CCharacterSpellsPanel__HandleOkButton_Hook);
+	my_hook(0x00497E40, CCharPageChar__HandleLevelUpButton, CCharPageChar__HandleLevelUpButton_Hook);
+	my_hook(0x005A9C30, CCharacterSkillsPanel__HandleOkButton, CCharacterSkillsPanel__HandleOkButton_Hook);
+	my_hook(0x005ABFC0, CCharacterSpellsPanel__HandleCancelButton, CCharacterSpellsPanel__HandleCancelButton_Hook);
+	my_hook(0x005AB2A0, CCharacterSpellsPanel__HandleModalEscKey, CCharacterSpellsPanel__HandleModalEscKey_Hook);
 
 	fflush(logFile);
 	DetourTransactionCommit();
