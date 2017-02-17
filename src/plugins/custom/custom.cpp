@@ -26,6 +26,9 @@ DWORD CNWCLevelUpStats__CalcNumberFeatsOffset = 0x004F2CF0;
 __declspec( naked ) void* __fastcall CNWCLevelUpStats__CalcNumberFeats(void *p_this,int edx, char *a2, char *a3){__asm{ jmp dword ptr [CNWCLevelUpStats__CalcNumberFeatsOffset] }}
 
 //Plugin
+void UnsetSpellcasterOverride(void *spell_panel);
+void SetSpellcasterOverride(void* cre_stats);
+
 void InitPlugin();
 
 FILE *logFile;
@@ -74,10 +77,8 @@ char __fastcall CNWCCreatureStats__GetClass_Hook(void *pThis, int edx, unsigned 
 	return CNWCCreatureStats__GetClass(pThis, edx, a2);
 }
 
-void (__fastcall *CCharacterSpellsPanel__HandleOkButton)(void *pThis, int edx);
-void __fastcall CCharacterSpellsPanel__HandleOkButton_Hook(void *pThis, int edx){
-
-	int cre_id = *(int*)((int)pThis + 2408);
+void UnsetSpellcasterOverride(void *spell_panel){
+	int cre_id = *(int*)((int)spell_panel + 2408);
 	void *cre = GetCreature(cre_id);
 	
 	if(g_caster_cls){
@@ -86,6 +87,12 @@ void __fastcall CCharacterSpellsPanel__HandleOkButton_Hook(void *pThis, int edx)
 		*((char*)cre_stats + 50) = g_lvlup_clspos;
 		g_caster_cls = 0;
 	}
+}
+
+void (__fastcall *CCharacterSpellsPanel__HandleOkButton)(void *pThis, int edx);
+void __fastcall CCharacterSpellsPanel__HandleOkButton_Hook(void *pThis, int edx){
+
+	UnsetSpellcasterOverride(pThis);
 
 	CCharacterSpellsPanel__HandleOkButton(pThis, edx);
 }
@@ -93,15 +100,7 @@ void __fastcall CCharacterSpellsPanel__HandleOkButton_Hook(void *pThis, int edx)
 void (__fastcall *CCharacterSpellsPanel__HandleCancelButton)(void *pThis, int edx);
 void __fastcall CCharacterSpellsPanel__HandleCancelButton_Hook(void *pThis, int edx){
 
-	int cre_id = *(int*)((int)pThis + 2408);
-	void *cre = GetCreature(cre_id);
-	
-	if(g_caster_cls){
-		g_caster_cls = 0;
-		void *cre_stats = *(void **)((int)cre + 696);
-		*((char*)cre_stats + 50) = g_lvlup_clspos;
-		g_caster_cls = 0;
-	}
+	UnsetSpellcasterOverride(pThis);
 
 	CCharacterSpellsPanel__HandleCancelButton(pThis, edx);
 }
@@ -109,17 +108,58 @@ void __fastcall CCharacterSpellsPanel__HandleCancelButton_Hook(void *pThis, int 
 int (__fastcall *CCharacterSpellsPanel__HandleModalEscKey)(void *pThis, int edx);
 int __fastcall CCharacterSpellsPanel__HandleModalEscKey_Hook(void *pThis, int edx){
 
-	int cre_id = *(int*)((int)pThis + 2408);
-	void *cre = GetCreature(cre_id);
-	
-	if(g_caster_cls){
-		g_caster_cls = 0;
-		void *cre_stats = *(void **)((int)cre + 696);
-		*((char*)cre_stats + 50) = g_lvlup_clspos;
-		g_caster_cls = 0;
-	}
+	UnsetSpellcasterOverride(pThis);
 
 	return CCharacterSpellsPanel__HandleModalEscKey(pThis, edx);
+}
+
+void SetSpellcasterOverride(void* cre_stats){
+	char cls_pos = *((char*)cre_stats + 50);
+	char cls = *((char *)cre_stats + 256 * cls_pos + 473);
+	char cls_lvl = *((char *)cre_stats + 256 * cls_pos + 474);
+	CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, cls);
+	char ArcSpelllvlMod = *((byte*)c + 612); 
+
+	if(ArcSpelllvlMod){
+		int caster_level;
+		int gain_spell_level = ((cls_lvl + ArcSpelllvlMod - 1) % ArcSpelllvlMod);
+		if(!gain_spell_level){
+			g_caster_cls = 0;
+			for (int i = 0; i < cls_pos; i++){
+				char caster_cls = *((char *)cre_stats + 256 * i + 473);
+				if(	caster_cls == CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
+					g_lvlup_clspos = *((char*)cre_stats + 50);
+					*((char*)cre_stats + 50) = i;
+					g_caster_cls = caster_cls;
+					caster_level = *((char *)cre_stats + 256 * i + 474);
+					g_total_level = caster_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+					break;
+				}
+			}
+		}
+	}else if(cls == CLASS_TYPE_BARD || cls == CLASS_TYPE_SORCERER || cls == CLASS_TYPE_WIZARD){
+		int cls_len = *((char*)cre_stats + 49);
+				
+		if(cls_pos == 2){
+			//Só a classe caster "mais da esquerda"
+			char caster_cls = *((char *)cre_stats + 473);
+			if(caster_cls ==  CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
+				return;
+			}
+		}
+		for(int i = cls_pos; i < cls_len; i++){
+			char prestige_caster_cls = *((char *)cre_stats + 256 * i + 473);
+			CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, prestige_caster_cls);
+			char ArcSpelllvlMod = *((byte*)c + 612); 
+			if(ArcSpelllvlMod){
+				int prestige_caster_cls_lvl = *((char *)cre_stats + 256 * i + 474);
+				g_total_level = cls_lvl + ((prestige_caster_cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+				g_caster_cls = cls;
+				break;
+			}
+		}
+	}
+	return;
 }
 
 void (__fastcall *CCharacterFeatsPanel__HandleOkButton)(void *pThis, int edx);
@@ -130,56 +170,9 @@ void __fastcall CCharacterFeatsPanel__HandleOkButton_Hook(void *pThis, int edx){
 
 	if(cre){
 		void *cre_stats = *(void **)((int)cre + 696);
-		char cls_pos = *((char*)cre_stats + 50);
-		char cls = *((char *)cre_stats + 256 * cls_pos + 473);
-		char cls_lvl = *((char *)cre_stats + 256 * cls_pos + 474);
-		CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, cls);
-		char ArcSpelllvlMod = *((byte*)c + 612); 
-		
-
-		if(ArcSpelllvlMod){
-			int caster_level;
-			int gain_spell_level = ((cls_lvl + ArcSpelllvlMod - 1) % ArcSpelllvlMod);
-			if(!gain_spell_level){
-				g_caster_cls = 0;
-				for (int i = 0; i < cls_pos; i++){
-					char caster_cls = *((char *)cre_stats + 256 * i + 473);
-					if(	caster_cls == CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
-						g_lvlup_clspos = *((char*)cre_stats + 50);
-						*((char*)cre_stats + 50) = i;
-						g_caster_cls = caster_cls;
-						caster_level = *((char *)cre_stats + 256 * i + 474);
-						g_total_level = caster_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
-						break;
-					}
-				}
-			}
-		}else if(cls == CLASS_TYPE_BARD || cls == CLASS_TYPE_SORCERER || cls == CLASS_TYPE_WIZARD){
-				int cls_len = *((char*)cre_stats + 49);
-				
-				if(cls_pos == 2){
-					//Só a classe caster "mais da esquerda"
-					char caster_cls = *((char *)cre_stats + 473);
-					if(caster_cls ==  CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
-						goto exit;
-					}
-				}
-				for(int i = cls_pos; i < cls_len; i++){
-					char prestige_caster_cls = *((char *)cre_stats + 256 * i + 473);
-					CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, prestige_caster_cls);
-					char ArcSpelllvlMod = *((byte*)c + 612); 
-					if(ArcSpelllvlMod){
-						int prestige_caster_cls_lvl = *((char *)cre_stats + 256 * i + 474);
-						g_total_level = cls_lvl + ((prestige_caster_cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
-						g_caster_cls = cls;
-						break;
-					}
-				}
-
-			}
+		SetSpellcasterOverride(cre_stats);
 	}
 
-exit:
 	CCharacterFeatsPanel__HandleOkButton(pThis, edx);
 }
 
@@ -190,62 +183,15 @@ void __fastcall CCharacterSkillsPanel__HandleOkButton_Hook(void *pThis, int edx)
 
 	if(cre){
 		void *cre_stats = *(void **)((int)cre + 696);
-		char cls_pos = *((char*)cre_stats + 50);
-		char cls = *((char *)cre_stats + 256 * cls_pos + 473);
-		char cls_lvl = *((char *)cre_stats + 256 * cls_pos + 474);
-		
 
 		char feat1 = 0;
 		char feat2 = 0;
 		CNWCLevelUpStats__CalcNumberFeats(cre_stats, 0, &feat1, &feat2);
 		if(!feat1 && !feat2){
-			CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, cls);
-			char ArcSpelllvlMod = *((byte*)c + 612); 
-
-			if(ArcSpelllvlMod){
-				int caster_level;
-				int gain_spell_level = ((cls_lvl + ArcSpelllvlMod - 1) % ArcSpelllvlMod);
-				if(!gain_spell_level){
-					g_caster_cls = 0;
-					for (int i = 0; i < cls_pos; i++){
-						char caster_cls = *((char *)cre_stats + 256 * i + 473);
-						if(	caster_cls == CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
-							g_lvlup_clspos = *((char*)cre_stats + 50);
-							*((char*)cre_stats + 50) = i;
-							g_caster_cls = caster_cls;
-							caster_level = *((char *)cre_stats + 256 * i + 474);
-							g_total_level = caster_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
-							break;
-						}
-					}
-				}
-			}else if(cls == CLASS_TYPE_BARD || cls == CLASS_TYPE_SORCERER || cls == CLASS_TYPE_WIZARD){
-				int cls_len = *((char*)cre_stats + 49);
-				
-				if(cls_pos == 2){
-					//Só a classe caster "mais da esquerda"
-					char caster_cls = *((char *)cre_stats + 473);
-					if(caster_cls ==  CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
-						goto exit;
-					}
-				}
-				for(int i = cls_pos; i < cls_len; i++){
-					char prestige_caster_cls = *((char *)cre_stats + 256 * i + 473);
-					CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, prestige_caster_cls);
-					char ArcSpelllvlMod = *((byte*)c + 612); 
-					if(ArcSpelllvlMod){
-						int prestige_caster_cls_lvl = *((char *)cre_stats + 256 * i + 474);
-						g_total_level = cls_lvl + ((prestige_caster_cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
-						g_caster_cls = cls;
-						break;
-					}
-				}
-
-			}
+			SetSpellcasterOverride(cre_stats);
 		}
 	}
 
-exit:
 	CCharacterSkillsPanel__HandleOkButton(pThis, edx);
 }
 
@@ -263,7 +209,7 @@ void __fastcall CCharPageChar__HandleLevelUpButton_Hook(void *pThis, int edx){
 	if(DetourAttach(&(PVOID&)pfunc, hook) == 0)	\
 		fprintf(logFile, #pfunc " Hooked\n");	\
 	else										\
-		fprintf(logFile, #pfunc " Failed\n")		\
+		fprintf(logFile, #pfunc " Failed\n")	\
 
 void HookFunctions(){
 	DetourTransactionBegin();
