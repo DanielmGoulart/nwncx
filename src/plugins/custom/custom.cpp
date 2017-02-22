@@ -10,6 +10,7 @@ int g_caster_cls = 0;
 int g_override_class = 0;
 int g_total_level = 0;
 int g_lvlup_clspos = 0;
+int g_sending_lvlup_flag = 0;
 
 //NWMain Calls
 DWORD GetCreatureOffset = 0x004BE830;
@@ -61,7 +62,7 @@ extern "C" __declspec(dllexport) int InitPlugin(PLUGINLINK *link)
 
 char (__fastcall *CNWCCreatureStats__GetClassLevel)(void *pThis, int edx, unsigned char a2);
 char __fastcall CNWCCreatureStats__GetClassLevel_Hook(void *pThis, int edx, unsigned char a2){
-	if(g_caster_cls){
+	if(g_total_level){
 		return g_total_level;
 	}
 	return CNWCCreatureStats__GetClassLevel(pThis, edx, a2);
@@ -83,9 +84,11 @@ void UnsetSpellcasterOverride(void *spell_panel){
 	
 	if(g_caster_cls){
 		g_caster_cls = 0;
+		g_total_level = 0;
 		void *cre_stats = *(void **)((int)cre + 696);
 		*((char*)cre_stats + 50) = g_lvlup_clspos;
-		g_caster_cls = 0;
+		fprintf(logFile," Resetando \n");
+		fflush(logFile);
 	}
 }
 
@@ -133,6 +136,7 @@ void SetSpellcasterOverride(void* cre_stats){
 					g_caster_cls = caster_cls;
 					caster_level = *((char *)cre_stats + 256 * i + 474);
 					g_total_level = caster_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+					fprintf(logFile," Pegando a prestige caster level %d\n", g_total_level);
 					break;
 				}
 			}
@@ -154,11 +158,13 @@ void SetSpellcasterOverride(void* cre_stats){
 			if(ArcSpelllvlMod){
 				int prestige_caster_cls_lvl = *((char *)cre_stats + 256 * i + 474);
 				g_total_level = cls_lvl + ((prestige_caster_cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
-				g_caster_cls = cls;
+				//g_caster_cls = cls;
+				fprintf(logFile," Pegando a classe caster %d level %d \n", g_caster_cls, g_total_level);
 				break;
 			}
 		}
 	}
+	fflush(logFile);
 	return;
 }
 
@@ -201,7 +207,50 @@ void __fastcall CCharPageChar__HandleLevelUpButton_Hook(void *pThis, int edx){
 	fprintf(logFile, "Resetando no começo do level up \n");
 	fflush(logFile);
 	g_caster_cls = 0;
+	g_total_level = 0;
 	CCharPageChar__HandleLevelUpButton(pThis, edx);
+}
+
+int (__fastcall *CNWCMessage__SendPlayerToServer_LevelUp)(void *pThis, int edx, void* curr_stats, void *lvlup_stats);
+int __fastcall CNWCMessage__SendPlayerToServer_LevelUp_Hook(void *pThis, int edx, void* curr_stats, void *lvlup_stats){
+	char cls_pos = *((char*)lvlup_stats + 50);
+	char cls = *((char *)lvlup_stats + 256 * cls_pos + 473);
+	char cls_lvl = *((char *)lvlup_stats + 256 * cls_pos + 474);
+	CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, cls);
+	char ArcSpelllvlMod = *((byte*)c + 612); 
+	if(ArcSpelllvlMod){
+	int gain_spell_level = ((cls_lvl + ArcSpelllvlMod - 1) % ArcSpelllvlMod);
+		if(!gain_spell_level){
+			for (int i = 0; i < cls_pos; i++){
+				char caster_cls = *((char *)lvlup_stats + 256 * i + 473);
+				if(	caster_cls == CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
+					g_sending_lvlup_flag = i;
+					break;
+				}
+			}
+		}
+	}
+
+	int ret = CNWCMessage__SendPlayerToServer_LevelUp(pThis, edx, curr_stats, lvlup_stats);
+	g_sending_lvlup_flag = 0;
+
+	return ret;
+}
+
+short (__fastcall *CNWCCreatureStats__GetNumberKnownSpells)(void *pThis, int edx, char cls_pos,  char a3);
+short __fastcall CNWCCreatureStats__GetNumberKnownSpells_Hook(void *pThis, int edx, char cls_pos,  char a3){
+	if(g_sending_lvlup_flag)
+		return CNWCCreatureStats__GetNumberKnownSpells(pThis, edx, g_sending_lvlup_flag, a3);
+
+	return CNWCCreatureStats__GetNumberKnownSpells(pThis, edx, cls_pos, a3);
+}
+
+int (__fastcall *CNWCCreatureStats__GetKnownSpell)(void *pThis, int edx, char cls_pos, char a3, char a4);
+int __fastcall CNWCCreatureStats__GetKnownSpell_Hook(void *pThis, int edx, char cls_pos, char a3, char a4){
+	if(g_sending_lvlup_flag)
+		return CNWCCreatureStats__GetKnownSpell(pThis, edx, g_sending_lvlup_flag, a3, a4);
+
+	return CNWCCreatureStats__GetKnownSpell(pThis, edx, cls_pos, a3, a4);
 }
 
 #define my_hook(addr, pfunc, hook)				\
@@ -223,6 +272,9 @@ void HookFunctions(){
 	my_hook(0x005A9C30, CCharacterSkillsPanel__HandleOkButton, CCharacterSkillsPanel__HandleOkButton_Hook);
 	my_hook(0x005ABFC0, CCharacterSpellsPanel__HandleCancelButton, CCharacterSpellsPanel__HandleCancelButton_Hook);
 	my_hook(0x005AB2A0, CCharacterSpellsPanel__HandleModalEscKey, CCharacterSpellsPanel__HandleModalEscKey_Hook);
+	my_hook(0x004B2550, CNWCMessage__SendPlayerToServer_LevelUp, CNWCMessage__SendPlayerToServer_LevelUp_Hook);
+	my_hook(0x004EF0C0, CNWCCreatureStats__GetNumberKnownSpells, CNWCCreatureStats__GetNumberKnownSpells_Hook);
+	my_hook(0x004EEF30, CNWCCreatureStats__GetKnownSpell, CNWCCreatureStats__GetKnownSpell_Hook);
 
 	fflush(logFile);
 	DetourTransactionCommit();
