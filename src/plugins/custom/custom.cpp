@@ -8,6 +8,7 @@ CNWRules *&g_pRules = *(CNWRules **) 0x0092DC64;
 
 int g_caster_cls = 0;
 int g_override_class = 0;
+int g_backup_level = 0;
 int g_total_level = 0;
 int g_lvlup_clspos = 0;
 int g_sending_lvlup_flag = 0;
@@ -86,8 +87,15 @@ void UnsetSpellcasterOverride(void *spell_panel){
 		g_caster_cls = 0;
 		g_total_level = 0;
 		void *cre_stats = *(void **)((int)cre + 696);
+		*((char *)cre_stats + 256 * (*((char*)cre_stats + 50)) + 474) = g_backup_level;
 		*((char*)cre_stats + 50) = g_lvlup_clspos;
-		fprintf(logFile," Resetando \n");
+		fprintf(logFile," Resetando Prestige Class \n");
+		fflush(logFile);
+	}else if(g_total_level){
+		g_total_level = 0;
+		void *cre_stats = *(void **)((int)cre + 696);
+		*((char *)cre_stats + 256 * (*((char*)cre_stats + 50)) + 474) = g_backup_level;
+		fprintf(logFile," Resetando Caster Class \n");
 		fflush(logFile);
 	}
 }
@@ -124,7 +132,6 @@ void SetSpellcasterOverride(void* cre_stats){
 	char ArcSpelllvlMod = *((byte*)c + 612); 
 
 	if(ArcSpelllvlMod){
-		int caster_level;
 		int gain_spell_level = ((cls_lvl + ArcSpelllvlMod - 1) % ArcSpelllvlMod);
 		if(!gain_spell_level){
 			g_caster_cls = 0;
@@ -134,8 +141,9 @@ void SetSpellcasterOverride(void* cre_stats){
 					g_lvlup_clspos = *((char*)cre_stats + 50);
 					*((char*)cre_stats + 50) = i;
 					g_caster_cls = caster_cls;
-					caster_level = *((char *)cre_stats + 256 * i + 474);
-					g_total_level = caster_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+					g_backup_level = *((char *)cre_stats + 256 * i + 474);
+					g_total_level = g_backup_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+					*((char *)cre_stats + 256 * i + 474) = g_total_level;
 					fprintf(logFile," Pegando a prestige caster level %d\n", g_total_level);
 					break;
 				}
@@ -144,7 +152,7 @@ void SetSpellcasterOverride(void* cre_stats){
 	}else if(cls == CLASS_TYPE_BARD || cls == CLASS_TYPE_SORCERER || cls == CLASS_TYPE_WIZARD){
 		int cls_len = *((char*)cre_stats + 49);
 				
-		if(cls_pos == 2){
+		if(cls_pos == 1){
 			//Só a classe caster "mais da esquerda"
 			char caster_cls = *((char *)cre_stats + 473);
 			if(caster_cls ==  CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
@@ -156,10 +164,11 @@ void SetSpellcasterOverride(void* cre_stats){
 			CNWClass_s *c = CNWRules__GetClass(g_pRules, 0, prestige_caster_cls);
 			char ArcSpelllvlMod = *((byte*)c + 612); 
 			if(ArcSpelllvlMod){
-				int prestige_caster_cls_lvl = *((char *)cre_stats + 256 * i + 474);
-				g_total_level = cls_lvl + ((prestige_caster_cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
-				//g_caster_cls = cls;
-				fprintf(logFile," Pegando a classe caster %d level %d \n", g_caster_cls, g_total_level);
+				int prestige_lvl = *((char *)cre_stats + 256 * i + 474);
+				g_total_level = cls_lvl + ((prestige_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+				g_backup_level = *((char *)cre_stats + 256 * cls_pos + 474);
+				*((char *)cre_stats + 256 * cls_pos + 474) = g_total_level;
+				fprintf(logFile," Pegando a classe caster %d level %d \n", cls, g_total_level);
 				break;
 			}
 		}
@@ -173,9 +182,10 @@ void __fastcall CCharacterFeatsPanel__HandleOkButton_Hook(void *pThis, int edx){
 	
 	int cre_id = *(int*)((int)pThis + 108);
 	void *cre = GetCreature(cre_id);
-
+	
 	if(cre){
 		void *cre_stats = *(void **)((int)cre + 696);
+		fprintf(logFile, "Feats\n");
 		SetSpellcasterOverride(cre_stats);
 	}
 
@@ -194,6 +204,7 @@ void __fastcall CCharacterSkillsPanel__HandleOkButton_Hook(void *pThis, int edx)
 		char feat2 = 0;
 		CNWCLevelUpStats__CalcNumberFeats(cre_stats, 0, &feat1, &feat2);
 		if(!feat1 && !feat2){
+			fprintf(logFile, "Skills\n");
 			SetSpellcasterOverride(cre_stats);
 		}
 	}
@@ -225,6 +236,8 @@ int __fastcall CNWCMessage__SendPlayerToServer_LevelUp_Hook(void *pThis, int edx
 				char caster_cls = *((char *)lvlup_stats + 256 * i + 473);
 				if(	caster_cls == CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
 					g_sending_lvlup_flag = i;
+					fprintf(logFile, "Pegando a cls_pos caster \n");
+					fflush(logFile);
 					break;
 				}
 			}
