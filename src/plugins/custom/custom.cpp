@@ -6,11 +6,8 @@
 //Globals
 CNWRules *&g_pRules = *(CNWRules **) 0x0092DC64;
 
-int g_caster_cls = 0;
-int g_override_class = 0;
 int g_backup_level = 0;
-int g_total_level = 0;
-int g_lvlup_clspos = 0;
+int g_prestige_clspos = 0;
 int g_sending_lvlup_flag = 0;
 
 //NWMain Calls
@@ -25,7 +22,7 @@ __declspec( naked ) void __fastcall CGuiModalPanel__Activate(void *p_this, int e
 DWORD CCharacterSpellsPanel__CCharacterSpellsPanelOffset = 0x005AAEB0;
 __declspec( naked ) void* __fastcall CCharacterSpellsPanel__CCharacterSpellsPanel(void *p_this,int edx, int a2, int a3){ __asm{ jmp dword ptr [CCharacterSpellsPanel__CCharacterSpellsPanelOffset] } }
 DWORD CNWCLevelUpStats__CalcNumberFeatsOffset = 0x004F2CF0;
-__declspec( naked ) void* __fastcall CNWCLevelUpStats__CalcNumberFeats(void *p_this,int edx, char *a2, char *a3){__asm{ jmp dword ptr [CNWCLevelUpStats__CalcNumberFeatsOffset] }}
+__declspec( naked ) void* __fastcall CNWCLevelUpStats__CalcNumberFeats(void *p_this,int edx, unsigned char &a2, unsigned char &a3){__asm{ jmp dword ptr [CNWCLevelUpStats__CalcNumberFeatsOffset] }}
 
 //Plugin
 void UnsetSpellcasterOverride(void *spell_panel);
@@ -63,18 +60,12 @@ extern "C" __declspec(dllexport) int InitPlugin(PLUGINLINK *link)
 
 char (__fastcall *CNWCCreatureStats__GetClassLevel)(void *pThis, int edx, unsigned char a2);
 char __fastcall CNWCCreatureStats__GetClassLevel_Hook(void *pThis, int edx, unsigned char a2){
-	if(g_total_level){
-		return g_total_level;
-	}
+
 	return CNWCCreatureStats__GetClassLevel(pThis, edx, a2);
 }
 
 char (__fastcall *CNWCCreatureStats__GetClass)(void *pThis, int edx, unsigned __int8 a2);
 char __fastcall CNWCCreatureStats__GetClass_Hook(void *pThis, int edx, unsigned __int8 a2){
-
-	if(g_caster_cls){
-		return g_caster_cls;
-	}
 
 	return CNWCCreatureStats__GetClass(pThis, edx, a2);
 }
@@ -82,22 +73,18 @@ char __fastcall CNWCCreatureStats__GetClass_Hook(void *pThis, int edx, unsigned 
 void UnsetSpellcasterOverride(void *spell_panel){
 	int cre_id = *(int*)((int)spell_panel + 2408);
 	void *cre = GetCreature(cre_id);
-	
-	if(g_caster_cls){
-		g_caster_cls = 0;
-		g_total_level = 0;
-		void *cre_stats = *(void **)((int)cre + 696);
+	void *cre_stats = *(void **)((int)cre + 696);
+
+	if(g_backup_level){
 		*((char *)cre_stats + 256 * (*((char*)cre_stats + 50)) + 474) = g_backup_level;
-		*((char*)cre_stats + 50) = g_lvlup_clspos;
-		fprintf(logFile," Resetando Prestige Class \n");
-		fflush(logFile);
-	}else if(g_total_level){
-		g_total_level = 0;
-		void *cre_stats = *(void **)((int)cre + 696);
-		*((char *)cre_stats + 256 * (*((char*)cre_stats + 50)) + 474) = g_backup_level;
-		fprintf(logFile," Resetando Caster Class \n");
-		fflush(logFile);
+		g_backup_level = 0;
 	}
+
+	if(g_prestige_clspos){
+		*((char*)cre_stats + 50) = g_prestige_clspos;
+		g_prestige_clspos = 0;
+	}
+
 }
 
 void (__fastcall *CCharacterSpellsPanel__HandleOkButton)(void *pThis, int edx);
@@ -125,6 +112,9 @@ int __fastcall CCharacterSpellsPanel__HandleModalEscKey_Hook(void *pThis, int ed
 }
 
 void SetSpellcasterOverride(void* cre_stats){
+	g_prestige_clspos = 0;
+	g_backup_level = 0;
+
 	char cls_pos = *((char*)cre_stats + 50);
 	char cls = *((char *)cre_stats + 256 * cls_pos + 473);
 	char cls_lvl = *((char *)cre_stats + 256 * cls_pos + 474);
@@ -134,17 +124,17 @@ void SetSpellcasterOverride(void* cre_stats){
 	if(ArcSpelllvlMod){
 		int gain_spell_level = ((cls_lvl + ArcSpelllvlMod - 1) % ArcSpelllvlMod);
 		if(!gain_spell_level){
-			g_caster_cls = 0;
 			for (int i = 0; i < cls_pos; i++){
 				char caster_cls = *((char *)cre_stats + 256 * i + 473);
 				if(	caster_cls == CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
-					g_lvlup_clspos = *((char*)cre_stats + 50);
+					g_prestige_clspos = *((char*)cre_stats + 50);
 					*((char*)cre_stats + 50) = i;
-					g_caster_cls = caster_cls;
+
 					g_backup_level = *((char *)cre_stats + 256 * i + 474);
-					g_total_level = g_backup_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
-					*((char *)cre_stats + 256 * i + 474) = g_total_level;
-					fprintf(logFile," Pegando a prestige caster level %d\n", g_total_level);
+					int total_level = g_backup_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+					*((char *)cre_stats + 256 * i + 474) = total_level;
+
+					fprintf(logFile," Pegando a prestige caster %d level %d\n", cls, total_level);
 					break;
 				}
 			}
@@ -165,10 +155,12 @@ void SetSpellcasterOverride(void* cre_stats){
 			char ArcSpelllvlMod = *((byte*)c + 612); 
 			if(ArcSpelllvlMod){
 				int prestige_lvl = *((char *)cre_stats + 256 * i + 474);
-				g_total_level = cls_lvl + ((prestige_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
-				g_backup_level = *((char *)cre_stats + 256 * cls_pos + 474);
-				*((char *)cre_stats + 256 * cls_pos + 474) = g_total_level;
-				fprintf(logFile," Pegando a classe caster %d level %d \n", cls, g_total_level);
+
+				int total_level = cls_lvl + ((prestige_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+				g_backup_level = cls_lvl;
+
+				*((char *)cre_stats + 256 * cls_pos + 474) = total_level;
+				fprintf(logFile," Pegando a classe caster %d level %d \n", cls, total_level);
 				break;
 			}
 		}
@@ -200,9 +192,9 @@ void __fastcall CCharacterSkillsPanel__HandleOkButton_Hook(void *pThis, int edx)
 	if(cre){
 		void *cre_stats = *(void **)((int)cre + 696);
 
-		char feat1 = 0;
-		char feat2 = 0;
-		CNWCLevelUpStats__CalcNumberFeats(cre_stats, 0, &feat1, &feat2);
+		unsigned char feat1;
+		unsigned char feat2;
+		CNWCLevelUpStats__CalcNumberFeats(cre_stats, 0, feat1, feat2);
 		if(!feat1 && !feat2){
 			fprintf(logFile, "Skills\n");
 			SetSpellcasterOverride(cre_stats);
@@ -217,8 +209,6 @@ void (__fastcall *CCharPageChar__HandleLevelUpButton)(void *pThis, int edx);
 void __fastcall CCharPageChar__HandleLevelUpButton_Hook(void *pThis, int edx){
 	fprintf(logFile, "Resetando no começo do level up \n");
 	fflush(logFile);
-	g_caster_cls = 0;
-	g_total_level = 0;
 	CCharPageChar__HandleLevelUpButton(pThis, edx);
 }
 
@@ -277,15 +267,19 @@ void HookFunctions(){
 	DetourTransactionBegin();
 	DetourUpdateThread(GetCurrentThread());
 
-	my_hook(0x005A6E00, CCharacterFeatsPanel__HandleOkButton, CCharacterFeatsPanel__HandleOkButton_Hook);
-	my_hook(0x004EE300, CNWCCreatureStats__GetClass, CNWCCreatureStats__GetClass_Hook);
-	my_hook(0x004EE320, CNWCCreatureStats__GetClassLevel, CNWCCreatureStats__GetClassLevel_Hook);
 	my_hook(0x005AC020, CCharacterSpellsPanel__HandleOkButton, CCharacterSpellsPanel__HandleOkButton_Hook);
-	my_hook(0x00497E40, CCharPageChar__HandleLevelUpButton, CCharPageChar__HandleLevelUpButton_Hook);
 	my_hook(0x005A9C30, CCharacterSkillsPanel__HandleOkButton, CCharacterSkillsPanel__HandleOkButton_Hook);
+	my_hook(0x005A6E00, CCharacterFeatsPanel__HandleOkButton, CCharacterFeatsPanel__HandleOkButton_Hook);
+	
+	//my_hook(0x004EE300, CNWCCreatureStats__GetClass, CNWCCreatureStats__GetClass_Hook);
+	//my_hook(0x004EE320, CNWCCreatureStats__GetClassLevel, CNWCCreatureStats__GetClassLevel_Hook);
+	//my_hook(0x00497E40, CCharPageChar__HandleLevelUpButton, CCharPageChar__HandleLevelUpButton_Hook);
+
 	my_hook(0x005ABFC0, CCharacterSpellsPanel__HandleCancelButton, CCharacterSpellsPanel__HandleCancelButton_Hook);
 	my_hook(0x005AB2A0, CCharacterSpellsPanel__HandleModalEscKey, CCharacterSpellsPanel__HandleModalEscKey_Hook);
+
 	my_hook(0x004B2550, CNWCMessage__SendPlayerToServer_LevelUp, CNWCMessage__SendPlayerToServer_LevelUp_Hook);
+
 	my_hook(0x004EF0C0, CNWCCreatureStats__GetNumberKnownSpells, CNWCCreatureStats__GetNumberKnownSpells_Hook);
 	my_hook(0x004EEF30, CNWCCreatureStats__GetKnownSpell, CNWCCreatureStats__GetKnownSpell_Hook);
 
