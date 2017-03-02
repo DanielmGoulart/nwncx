@@ -9,6 +9,8 @@ CNWRules *&g_pRules = *(CNWRules **) 0x0092DC64;
 int g_backup_level = 0;
 int g_prestige_clspos = 0;
 int g_sending_lvlup_flag = 0;
+unsigned char g_feat1 = 0;
+unsigned char g_feat2 = 0;
 
 //NWMain Calls
 DWORD GetCreatureOffset = 0x004BE830;
@@ -22,11 +24,12 @@ __declspec( naked ) void __fastcall CGuiModalPanel__Activate(void *p_this, int e
 DWORD CCharacterSpellsPanel__CCharacterSpellsPanelOffset = 0x005AAEB0;
 __declspec( naked ) void* __fastcall CCharacterSpellsPanel__CCharacterSpellsPanel(void *p_this,int edx, int a2, int a3){ __asm{ jmp dword ptr [CCharacterSpellsPanel__CCharacterSpellsPanelOffset] } }
 DWORD CNWCLevelUpStats__CalcNumberFeatsOffset = 0x004F2CF0;
-__declspec( naked ) void* __fastcall CNWCLevelUpStats__CalcNumberFeats(void *p_this,int edx, unsigned char &a2, unsigned char &a3){__asm{ jmp dword ptr [CNWCLevelUpStats__CalcNumberFeatsOffset] }}
+__declspec( naked ) void __fastcall CNWCLevelUpStats__CalcNumberFeats(void *p_this,int edx, unsigned char &a2, unsigned char &a3){__asm{ jmp dword ptr [CNWCLevelUpStats__CalcNumberFeatsOffset] }}
 
 //Plugin
 void UnsetSpellcasterOverride(void *spell_panel);
 void SetSpellcasterOverride(void* cre_stats);
+bool EnableWrite (unsigned long location);
 
 void InitPlugin();
 
@@ -56,18 +59,6 @@ extern "C" __declspec(dllexport) int InitPlugin(PLUGINLINK *link)
 	pluginLink=link;
 	InitPlugin();
 	return 0;
-}
-
-char (__fastcall *CNWCCreatureStats__GetClassLevel)(void *pThis, int edx, unsigned char a2);
-char __fastcall CNWCCreatureStats__GetClassLevel_Hook(void *pThis, int edx, unsigned char a2){
-
-	return CNWCCreatureStats__GetClassLevel(pThis, edx, a2);
-}
-
-char (__fastcall *CNWCCreatureStats__GetClass)(void *pThis, int edx, unsigned __int8 a2);
-char __fastcall CNWCCreatureStats__GetClass_Hook(void *pThis, int edx, unsigned __int8 a2){
-
-	return CNWCCreatureStats__GetClass(pThis, edx, a2);
 }
 
 void UnsetSpellcasterOverride(void *spell_panel){
@@ -129,17 +120,20 @@ void SetSpellcasterOverride(void* cre_stats){
 				if(	caster_cls == CLASS_TYPE_BARD || caster_cls == CLASS_TYPE_SORCERER || caster_cls == CLASS_TYPE_WIZARD){
 					g_prestige_clspos = *((char*)cre_stats + 50);
 					*((char*)cre_stats + 50) = i;
+					int total_level = 0;
 
-					g_backup_level = *((char *)cre_stats + 256 * i + 474);
-					int total_level = g_backup_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
-					*((char *)cre_stats + 256 * i + 474) = total_level;
-
+					if(caster_cls != CLASS_TYPE_WIZARD){
+						g_backup_level = *((char *)cre_stats + 256 * i + 474);
+						total_level = g_backup_level + ((cls_lvl + ArcSpelllvlMod - 1) / ArcSpelllvlMod);
+					
+						*((char *)cre_stats + 256 * i + 474) = total_level;
+					}
 					fprintf(logFile," Pegando a prestige caster %d level %d\n", cls, total_level);
 					break;
 				}
 			}
 		}
-	}else if(cls == CLASS_TYPE_BARD || cls == CLASS_TYPE_SORCERER || cls == CLASS_TYPE_WIZARD){
+	}else if(cls == CLASS_TYPE_BARD || cls == CLASS_TYPE_SORCERER){
 		int cls_len = *((char*)cre_stats + 49);
 				
 		if(cls_pos == 1){
@@ -192,10 +186,8 @@ void __fastcall CCharacterSkillsPanel__HandleOkButton_Hook(void *pThis, int edx)
 	if(cre){
 		void *cre_stats = *(void **)((int)cre + 696);
 
-		unsigned char feat1;
-		unsigned char feat2;
-		CNWCLevelUpStats__CalcNumberFeats(cre_stats, 0, feat1, feat2);
-		if(!feat1 && !feat2){
+		CNWCLevelUpStats__CalcNumberFeats(cre_stats, 0, g_feat1, g_feat2);
+		if(!g_feat1 && !g_feat2){
 			fprintf(logFile, "Skills\n");
 			SetSpellcasterOverride(cre_stats);
 		}
@@ -256,6 +248,13 @@ int __fastcall CNWCCreatureStats__GetKnownSpell_Hook(void *pThis, int edx, char 
 	return CNWCCreatureStats__GetKnownSpell(pThis, edx, cls_pos, a3, a4);
 }
 
+void __fastcall CNWCLevelUpStats__CalcNumberFeats_Hook(void *p_this,int edx, unsigned char &a2, unsigned char &a3){
+	a2 = g_feat1;
+	a3 = g_feat2;
+
+	return;
+}
+
 #define my_hook(addr, pfunc, hook)				\
 	*(DWORD*)&pfunc = addr;						\
 	if(DetourAttach(&(PVOID&)pfunc, hook) == 0)	\
@@ -282,6 +281,15 @@ void HookFunctions(){
 
 	my_hook(0x004EF0C0, CNWCCreatureStats__GetNumberKnownSpells, CNWCCreatureStats__GetNumberKnownSpells_Hook);
 	my_hook(0x004EEF30, CNWCCreatureStats__GetKnownSpell, CNWCCreatureStats__GetKnownSpell_Hook);
+
+	DWORD oldAlloc;
+	BYTE *addr = (BYTE*)0x005A9DB6;
+	if(VirtualProtect((LPVOID)addr, 0xFF, PAGE_EXECUTE_READWRITE, &oldAlloc))
+			fprintf(logFile, "* Process memory authorized to write\n");
+
+	addr[0] = 0xE8;
+	DWORD offset = ((DWORD)CNWCLevelUpStats__CalcNumberFeats_Hook) - 0x005A9DB6 - 5;
+	memcpy(&addr[1], &offset, 4);
 
 	fflush(logFile);
 	DetourTransactionCommit();
