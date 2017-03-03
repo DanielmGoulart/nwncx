@@ -265,12 +265,13 @@ void HookFunctions(){
 
 	DWORD oldAlloc;
 	BYTE *addr = (BYTE*)0x005A9DB6;
-	if(VirtualProtect((LPVOID)addr, 0xFF, PAGE_EXECUTE_READWRITE, &oldAlloc))
-			fprintf(logFile, "* Process memory authorized to write\n");
+	if(VirtualProtect((LPVOID)addr, 0xFF, PAGE_EXECUTE_READWRITE, &oldAlloc)){
+		fprintf(logFile, "* Process memory authorized to write\n");
 
-	addr[0] = 0xE8;
-	DWORD offset = ((DWORD)CNWCLevelUpStats__CalcNumberFeats_Hook) - 0x005A9DB6 - 5;
-	memcpy(&addr[1], &offset, 4);
+		addr[0] = 0xE8;
+		DWORD offset = ((DWORD)CNWCLevelUpStats__CalcNumberFeats_Hook) - 0x005A9DB6 - 5;
+		memcpy(&addr[1], &offset, 4);
+	}
 
 	fflush(logFile);
 	DetourTransactionCommit();
