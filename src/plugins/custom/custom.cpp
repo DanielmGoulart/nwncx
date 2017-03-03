@@ -17,12 +17,6 @@ DWORD GetCreatureOffset = 0x004BE830;
 __declspec( naked ) void* __cdecl GetCreature(int n){ __asm{ jmp dword ptr [GetCreatureOffset] }}
 DWORD CNWRules__GetClassOffset = 0x0041DC30;
 __declspec( naked ) CNWClass_s* __fastcall CNWRules__GetClass(void *rules, int edx, unsigned __int8 a2){ __asm{ jmp dword ptr [CNWRules__GetClassOffset] } }
-DWORD CGuiModalPanel__DeactivateOffset = 0x005E4650;
-__declspec( naked ) void __fastcall CGuiModalPanel__Deactivate(void *p_this, int edx, int a2){ __asm{ jmp dword ptr [CGuiModalPanel__DeactivateOffset] } }
-DWORD CGuiModalPanel__ActivateOffset = 0x005E4620;
-__declspec( naked ) void __fastcall CGuiModalPanel__Activate(void *p_this, int edx){ __asm{ jmp dword ptr [CGuiModalPanel__ActivateOffset] } }
-DWORD CCharacterSpellsPanel__CCharacterSpellsPanelOffset = 0x005AAEB0;
-__declspec( naked ) void* __fastcall CCharacterSpellsPanel__CCharacterSpellsPanel(void *p_this,int edx, int a2, int a3){ __asm{ jmp dword ptr [CCharacterSpellsPanel__CCharacterSpellsPanelOffset] } }
 DWORD CNWCLevelUpStats__CalcNumberFeatsOffset = 0x004F2CF0;
 __declspec( naked ) void __fastcall CNWCLevelUpStats__CalcNumberFeats(void *p_this,int edx, unsigned char &a2, unsigned char &a3){__asm{ jmp dword ptr [CNWCLevelUpStats__CalcNumberFeatsOffset] }}
 
@@ -196,14 +190,6 @@ void __fastcall CCharacterSkillsPanel__HandleOkButton_Hook(void *pThis, int edx)
 	CCharacterSkillsPanel__HandleOkButton(pThis, edx);
 }
 
-
-void (__fastcall *CCharPageChar__HandleLevelUpButton)(void *pThis, int edx);
-void __fastcall CCharPageChar__HandleLevelUpButton_Hook(void *pThis, int edx){
-	fprintf(logFile, "Resetando no começo do level up \n");
-	fflush(logFile);
-	CCharPageChar__HandleLevelUpButton(pThis, edx);
-}
-
 int (__fastcall *CNWCMessage__SendPlayerToServer_LevelUp)(void *pThis, int edx, void* curr_stats, void *lvlup_stats);
 int __fastcall CNWCMessage__SendPlayerToServer_LevelUp_Hook(void *pThis, int edx, void* curr_stats, void *lvlup_stats){
 	char cls_pos = *((char*)lvlup_stats + 50);
@@ -269,11 +255,6 @@ void HookFunctions(){
 	my_hook(0x005AC020, CCharacterSpellsPanel__HandleOkButton, CCharacterSpellsPanel__HandleOkButton_Hook);
 	my_hook(0x005A9C30, CCharacterSkillsPanel__HandleOkButton, CCharacterSkillsPanel__HandleOkButton_Hook);
 	my_hook(0x005A6E00, CCharacterFeatsPanel__HandleOkButton, CCharacterFeatsPanel__HandleOkButton_Hook);
-	
-	//my_hook(0x004EE300, CNWCCreatureStats__GetClass, CNWCCreatureStats__GetClass_Hook);
-	//my_hook(0x004EE320, CNWCCreatureStats__GetClassLevel, CNWCCreatureStats__GetClassLevel_Hook);
-	//my_hook(0x00497E40, CCharPageChar__HandleLevelUpButton, CCharPageChar__HandleLevelUpButton_Hook);
-
 	my_hook(0x005ABFC0, CCharacterSpellsPanel__HandleCancelButton, CCharacterSpellsPanel__HandleCancelButton_Hook);
 	my_hook(0x005AB2A0, CCharacterSpellsPanel__HandleModalEscKey, CCharacterSpellsPanel__HandleModalEscKey_Hook);
 
