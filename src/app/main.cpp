@@ -6,15 +6,15 @@
 #include "window.h"
 
 int WINAPI _tWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR pCmdLine, int nCmdShow){
-	WindowApp *g = new WindowApp();
+	WindowApp *w = new WindowApp();
 
-	if( g && g->Initialize(hInstance, nCmdShow)){
+	if( w && w->Initialize(hInstance, nCmdShow)){
 		while(true){
-			if(!g->ProcessWindowMessage())
+			if(!w->ProcessWindowMessage())
 				break;
 		}
 
-		delete g;
+		delete w;
 	}
 
 	return 0;
