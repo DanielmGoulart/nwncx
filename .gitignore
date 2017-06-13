@@ -12,6 +12,7 @@
 *.sdf
 *.suo
 *.opensdf
+*.res
 Debug
 Release
 ipch

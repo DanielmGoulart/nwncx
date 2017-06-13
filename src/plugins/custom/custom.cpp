@@ -8,7 +8,7 @@ CNWRules *&g_pRules = *(CNWRules **) 0x0092DC64;
 
 int g_backup_level = 0;
 int g_prestige_clspos = 0;
-int g_sending_lvlup_flag = 0;
+int g_sending_lvlup_flag = -1;
 unsigned char g_feat1 = 0;
 unsigned char g_feat2 = 0;
 
@@ -213,14 +213,14 @@ int __fastcall CNWCMessage__SendPlayerToServer_LevelUp_Hook(void *pThis, int edx
 	}
 
 	int ret = CNWCMessage__SendPlayerToServer_LevelUp(pThis, edx, curr_stats, lvlup_stats);
-	g_sending_lvlup_flag = 0;
+	g_sending_lvlup_flag = -1;
 
 	return ret;
 }
 
 short (__fastcall *CNWCCreatureStats__GetNumberKnownSpells)(void *pThis, int edx, char cls_pos,  char a3);
 short __fastcall CNWCCreatureStats__GetNumberKnownSpells_Hook(void *pThis, int edx, char cls_pos,  char a3){
-	if(g_sending_lvlup_flag)
+	if(g_sending_lvlup_flag >= 0)
 		return CNWCCreatureStats__GetNumberKnownSpells(pThis, edx, g_sending_lvlup_flag, a3);
 
 	return CNWCCreatureStats__GetNumberKnownSpells(pThis, edx, cls_pos, a3);
@@ -228,7 +228,7 @@ short __fastcall CNWCCreatureStats__GetNumberKnownSpells_Hook(void *pThis, int e
 
 int (__fastcall *CNWCCreatureStats__GetKnownSpell)(void *pThis, int edx, char cls_pos, char a3, char a4);
 int __fastcall CNWCCreatureStats__GetKnownSpell_Hook(void *pThis, int edx, char cls_pos, char a3, char a4){
-	if(g_sending_lvlup_flag)
+	if(g_sending_lvlup_flag >= 0)
 		return CNWCCreatureStats__GetKnownSpell(pThis, edx, g_sending_lvlup_flag, a3, a4);
 
 	return CNWCCreatureStats__GetKnownSpell(pThis, edx, cls_pos, a3, a4);
